@@ -2,18 +2,26 @@ name: Stortemelk availability check
 
 on:
   schedule:
+    # Availability check: every 15 minutes, 24/7
     - cron: "*/15 * * * *"
+    # Daily heartbeat: every morning at 9:00 Amsterdam time (= 7:00 UTC)
+    - cron: "0 7 * * *"
   workflow_dispatch:
+    # Allows you to trigger a manual run from the GitHub Actions tab
 
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
+
+      # Cache the Playwright browser binary so we don't re-download 180 MB every run
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -21,9 +29,22 @@ jobs:
           key: playwright-chromium-${{ runner.os }}-${{ hashFiles('stortemelk_monitor.py') }}
           restore-keys: |
             playwright-chromium-${{ runner.os }}-
+
       - name: Install Playwright browser
         run: uv run stortemelk_monitor.py --install-browser
+
+      # On the daily 7:00 UTC trigger, send a heartbeat notification (no browser needed)
+      - name: Send daily heartbeat
+        if: github.event.schedule == '0 7 * * *'
+        run: uv run stortemelk_monitor.py --heartbeat
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+
+      # On every other trigger (*/15 cron or manual), check availability
       - name: Check availability and notify if open
+        if: github.event.schedule != '0 7 * * *'
         run: uv run stortemelk_monitor.py --once
         env:
+          # Set this secret in: GitHub repo → Settings → Secrets → Actions → New secret
+          # Name: NTFY_TOPIC   Value: your-unique-topic-name
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
