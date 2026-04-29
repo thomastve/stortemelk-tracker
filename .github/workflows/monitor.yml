@@ -1,0 +1,29 @@
+name: Stortemelk availability check
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('stortemelk_monitor.py') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+      - name: Install Playwright browser
+        run: uv run stortemelk_monitor.py --install-browser
+      - name: Check availability and notify if open
+        run: uv run stortemelk_monitor.py --once
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
