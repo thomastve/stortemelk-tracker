@@ -1,0 +1,39 @@
+name: Stortemelk availability check
+
+on:
+  schedule:
+    # Runs every 15 minutes, 24/7
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    # Allows you to trigger a manual run from the GitHub Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      # Cache the Playwright browser binary so we don't re-download 180 MB every run
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('stortemelk_monitor.py') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright browser
+        run: uv run stortemelk_monitor.py --install-browser
+
+      - name: Check availability and notify if open
+        run: uv run stortemelk_monitor.py --once
+        env:
+          # Set this secret in: GitHub repo → Settings → Secrets → Actions → New secret
+          # Name: NTFY_TOPIC   Value: your-unique-topic-name
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
