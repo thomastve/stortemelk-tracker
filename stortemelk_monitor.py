@@ -52,7 +52,7 @@ BOOKING_URL = (
 )
 
 # How often to check
-CHECK_INTERVAL_MIN = 15
+CHECK_INTERVAL_MIN = 5
 
 # After this many consecutive failures, pause for 1 hour before retrying
 MAX_ERRORS = 5
