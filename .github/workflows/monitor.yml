@@ -2,8 +2,10 @@ name: Stortemelk availability check
 
 on:
   schedule:
-    # Runs every 15 minutes, 24/7
+    # Availability check: every 15 minutes, 24/7
     - cron: "*/15 * * * *"
+    # Daily heartbeat: every morning at 9:00 Amsterdam time (= 7:00 UTC)
+    - cron: "0 7 * * *"
   workflow_dispatch:
     # Allows you to trigger a manual run from the GitHub Actions tab
 
@@ -31,7 +33,16 @@ jobs:
       - name: Install Playwright browser
         run: uv run stortemelk_monitor.py --install-browser
 
+      # On the daily 7:00 UTC trigger, send a heartbeat notification (no browser needed)
+      - name: Send daily heartbeat
+        if: github.event.schedule == '0 7 * * *'
+        run: uv run stortemelk_monitor.py --heartbeat
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+
+      # On every other trigger (*/15 cron or manual), check availability
       - name: Check availability and notify if open
+        if: github.event.schedule != '0 7 * * *'
         run: uv run stortemelk_monitor.py --once
         env:
           # Set this secret in: GitHub repo → Settings → Secrets → Actions → New secret

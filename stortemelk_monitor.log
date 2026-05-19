@@ -1,0 +1,49 @@
+2026-04-29 14:21:53,321 [INFO] Stortemelk monitor started — checking every 15 minutes
+2026-04-29 14:21:53,322 [INFO] Dates: 26-08-2026 → 31-08-2026
+2026-04-29 14:21:53,409 [INFO] ntfy topic: https://ntfy.sh/stortemelk-tracker-abc123
+2026-04-29 14:21:57,577 [ERROR] [2026-04-29 14:21] Check failed (1/5): BrowserType.launch: Executable doesn't exist at C:\Users\thomv\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-04-29 14:36:58,443 [ERROR] [2026-04-29 14:36] Check failed (2/5): BrowserType.launch: Executable doesn't exist at C:\Users\thomv\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-04-29 14:38:14,784 [INFO] Stortemelk monitor started - checking every 15 minutes
+2026-04-29 14:38:14,784 [INFO] Dates: 26-08-2026 -> 31-08-2026
+2026-04-29 14:38:14,784 [INFO] ntfy topic: https://ntfy.sh/stortemelk-tracker-abc123
+2026-04-29 14:38:15,311 [ERROR] [2026-04-29 14:38] Check failed (1/5): BrowserType.launch: Executable doesn't exist at C:\Users\thomv\AppData\Local\ms-playwright\chromium_headless_shell-1217\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+2026-04-29 14:58:20,556 [INFO] Stortemelk monitor started - checking every 15 minutes
+2026-04-29 14:58:20,557 [INFO] Dates: 26-08-2026 -> 31-08-2026
+2026-04-29 14:58:20,557 [INFO] ntfy topic: https://ntfy.sh/stortemelk-tracker-abc123
+2026-04-29 14:58:33,447 [WARNING] Could not find arrival date input — selectors may need updating (use --discover)
+2026-04-29 14:58:33,473 [WARNING] Could not find departure date input — selectors may need updating (use --discover)
+2026-04-29 14:58:41,805 [WARNING] Unknown API response structure from https://o4508015005335552.ingest.de.sentry.io/api/4508015007170640/envelope/?sentry_key=cf67a78a01dffeb471842bbb2568477e&sentry_version=7&sentry_client=sentry.javascript.vue%2F8.32.0: {}
+2026-04-29 14:58:41,805 [INFO] Falling back to DOM check (no usable API response captured)
+2026-04-29 14:58:51,088 [ERROR] [2026-04-29 14:58] Check failed (1/5): Could not determine availability from DOM — no known availability/unavailability indicators found. Run with --discover to inspect the widget.
+2026-04-29 15:03:32,909 [INFO] TEST MODE - running a single check...
+2026-04-29 15:03:40,310 [INFO] RESULT: AVAILABLE on 2026-08-31
+2026-04-29 15:03:40,311 [INFO] Test complete.
+2026-04-29 15:04:00,704 [INFO] TEST MODE - running a single check...
+2026-04-29 15:04:08,273 [INFO] RESULT: Not available (all dates blocked, as expected)
+2026-04-29 15:04:08,274 [INFO] Test complete.
+2026-04-29 15:15:17,062 [INFO] ONCE MODE - single check (notification sent if available)...
+2026-04-29 15:15:27,287 [INFO] Not available.
