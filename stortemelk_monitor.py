@@ -40,10 +40,11 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 
 # ── CONFIGURATION ─────────────────────────────────────────────────────────────
 
-# Dates to watch — any date in this range becoming available triggers a notification.
-# We watch Aug 26-30 (the nights to sleep); Aug 31 is departure only so we skip it.
+# Dates to watch — a notification fires ONLY when EVERY date in this list is
+# marked available (continuous stay). Partial availability (e.g. one stray date
+# flipping open) is not bookable as a full stay, so it should not alert.
 # Format: "YYYY-MM-DD"
-WATCH_DATES = [f"2026-08-{d:02d}" for d in range(26, 31)]  # Aug 26 – Aug 30
+WATCH_DATES = [f"2026-08-{d:02d}" for d in range(26, 32)]  # Aug 26 – Aug 31 (6 nights)
 
 # The booking page URL (pre-selects the camping / Kamperen category)
 BOOKING_URL = (
@@ -101,8 +102,10 @@ async def check_availability() -> tuple[bool, list[str]]:
     Load the booking page and intercept the calendar API response.
 
     Returns:
-        (available, available_dates) where available_dates lists the
-        specific dates that have opened up.
+        (all_nights_open, available_dates) — `all_nights_open` is True only if
+        EVERY date in WATCH_DATES is marked available (continuous stay).
+        `available_dates` is the sorted subset of WATCH_DATES currently flagged
+        available — may be partial; useful for debug logging when not all open.
 
     Raises:
         RuntimeError  if no calendar API response was captured
@@ -166,14 +169,13 @@ async def check_availability() -> tuple[bool, list[str]]:
             f"URL attempted: {BOOKING_URL}"
         )
 
-    # Check which (if any) watched dates have availability
-    available_dates = []
-    for entry in captured["entries"]:
-        date = entry.get("date", "")
-        if date in watch_set and entry.get("available") is True:
-            available_dates.append(date)
-
-    return bool(available_dates), available_dates
+    available_dates = sorted(
+        entry.get("date", "")
+        for entry in captured["entries"]
+        if entry.get("date", "") in watch_set and entry.get("available") is True
+    )
+    all_nights_open = set(available_dates) == watch_set
+    return all_nights_open, available_dates
 
 
 # ── NOTIFICATION ──────────────────────────────────────────────────────────────
@@ -229,17 +231,22 @@ async def main():
     while True:
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         try:
-            available, available_dates = await check_availability()
+            all_open, available_dates = await check_availability()
             consecutive_errors = 0
 
-            if available:
-                log.info("[%s] AVAILABLE! Dates: %s — sending notification!", ts, ", ".join(available_dates))
+            if all_open:
+                log.info("[%s] ALL NIGHTS AVAILABLE! Dates: %s — sending notification!", ts, ", ".join(available_dates))
                 send_notification(available_dates)
                 if STOP_AFTER_ALERT:
                     log.info("Stopping monitor (STOP_AFTER_ALERT=True). Book fast!")
                     break
                 else:
                     log.info("Continuing to monitor (STOP_AFTER_ALERT=False).")
+            elif available_dates:
+                log.info(
+                    "[%s] Partial availability only: %s (need all of %s). Next check in %d min.",
+                    ts, ", ".join(available_dates), ", ".join(sorted(WATCH_DATES)), CHECK_INTERVAL_MIN,
+                )
             else:
                 log.info("[%s] Not available. Next check in %d min.", ts, CHECK_INTERVAL_MIN)
 
@@ -264,9 +271,15 @@ async def main():
 async def run_single_test():
     """Run one check and print the result, then exit (no notification sent)."""
     log.info("TEST MODE - running a single check (no notification will be sent)...")
-    available, dates = await check_availability()
-    if available:
-        log.info("RESULT: AVAILABLE on %s", ", ".join(dates))
+    all_open, dates = await check_availability()
+    if all_open:
+        log.info("RESULT: ALL NIGHTS AVAILABLE on %s", ", ".join(dates))
+    elif dates:
+        log.info(
+            "RESULT: Partial only: %s (need all of %s)",
+            ", ".join(dates),
+            ", ".join(sorted(WATCH_DATES)),
+        )
     else:
         log.info("RESULT: Not available (all dates blocked, as expected)")
     log.info("Test complete.")
@@ -274,14 +287,20 @@ async def run_single_test():
 
 async def run_once():
     """
-    Run one check, send a notification if spots are available, then exit.
-    Used by GitHub Actions — runs on every scheduled trigger.
+    Run one check, send a notification if ALL watched nights are available,
+    then exit. Used by GitHub Actions — runs on every scheduled trigger.
     """
-    log.info("ONCE MODE - single check (notification sent if available)...")
-    available, dates = await check_availability()
-    if available:
-        log.info("AVAILABLE on %s - sending notification!", ", ".join(dates))
+    log.info("ONCE MODE - single check (notification sent only if all %d nights available)...", len(WATCH_DATES))
+    all_open, dates = await check_availability()
+    if all_open:
+        log.info("ALL NIGHTS AVAILABLE on %s - sending notification!", ", ".join(dates))
         send_notification(dates)
+    elif dates:
+        log.info(
+            "Partial availability only: %s (need all of %s) - no notification.",
+            ", ".join(dates),
+            ", ".join(sorted(WATCH_DATES)),
+        )
     else:
         log.info("Not available.")
 
