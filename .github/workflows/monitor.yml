@@ -2,9 +2,19 @@ name: Stortemelk availability check
 
 on:
   workflow_dispatch:
-    # Triggered every 15 min by cron-job.org (more punctual than GitHub's
-    # built-in schedule, which delays runs 30-90 min during peak load).
+    # Triggered by cron-job.org (more punctual than GitHub's built-in schedule,
+    # which delays runs 30-90 min during peak load). Set up two cron-job.org jobs:
+    #   - "check"     every 15 min       -> availability scrape
+    #   - "heartbeat" daily at 07:00 UTC -> "still alive" push
     # Also lets you trigger a manual run from the GitHub Actions tab.
+    inputs:
+      mode:
+        description: 'What to run: availability check (default) or daily heartbeat push'
+        type: choice
+        options:
+          - check
+          - heartbeat
+        default: check
 
 jobs:
   check:
@@ -30,11 +40,21 @@ jobs:
       - name: Install Playwright browser
         run: uv run stortemelk_monitor.py --install-browser
 
+      # Daily heartbeat: "still alive" push (no browser scrape needed)
+      - name: Send daily heartbeat
+        if: inputs.mode == 'heartbeat'
+        run: uv run stortemelk_monitor.py --heartbeat
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+
+      # Availability check: scrape the calendar API and notify (push + optional email) if open
       - name: Check availability and notify if open
+        if: inputs.mode == 'check'
         run: uv run stortemelk_monitor.py --once
         env:
-          # Set these secrets in: GitHub repo → Settings → Secrets → Actions → New secret
-          # NTFY_TOPIC: your-unique-topic-name
-          # EMAIL_TO:   recipient email (optional; ntfy forwards the alert if set)
+          # Set these secrets in: GitHub repo → Settings → Secrets → Actions
+          # NTFY_TOPIC: your-unique-ntfy-topic
+          # EMAIL_TO:   comma-separated recipient list (optional; ntfy forwards
+          #             the alert by email if set)
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           EMAIL_TO:   ${{ secrets.EMAIL_TO }}

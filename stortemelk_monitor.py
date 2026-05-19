@@ -286,6 +286,31 @@ async def run_once():
         log.info("Not available.")
 
 
+def send_heartbeat():
+    """
+    Send a daily 'still running' notification so you know the system is alive.
+    Includes a direct link to the booking page so you can check manually too.
+    """
+    message = (
+        f"Stortemelk tracker is actief - geen beschikbaarheid gevonden voor 26-31 augustus 2026.\n"
+        f"Bekijk zelf: {BOOKING_URL}"
+    )
+    try:
+        httpx.post(
+            NTFY_URL,
+            content=message.encode("utf-8"),
+            headers={
+                "Title": "Stortemelk tracker: nog steeds actief",
+                "Priority": "low",
+                "Tags": "white_check_mark,camping",
+            },
+            timeout=10,
+        )
+        log.info("Heartbeat notification sent -> %s", NTFY_URL)
+    except Exception as e:
+        log.error("Failed to send heartbeat notification: %s", e)
+
+
 if __name__ == "__main__":
     if "--install-browser" in sys.argv:
         import subprocess
@@ -294,5 +319,7 @@ if __name__ == "__main__":
         asyncio.run(run_single_test())
     elif "--once" in sys.argv:
         asyncio.run(run_once())
+    elif "--heartbeat" in sys.argv:
+        send_heartbeat()
     else:
         asyncio.run(main())
