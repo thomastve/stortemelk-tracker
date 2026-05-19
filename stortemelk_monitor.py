@@ -67,6 +67,15 @@ STOP_AFTER_ALERT = True
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "stortemelk-tracker-abc123")
 NTFY_URL   = f"https://ntfy.sh/{NTFY_TOPIC}"
 
+# Optional email forwarding. When set, ntfy.sh forwards the message body to these
+# addresses (in addition to the push notification). Comma-separated for multiple
+# recipients — we send one ntfy POST per address because ntfy's `Email:` header
+# only accepts a single address. Free public ntfy instance limits ~5 emails/day
+# per egress IP, which is fine because STOP_AFTER_ALERT=True caps us at one
+# notification event (so at most N emails where N = number of recipients).
+EMAIL_TO = os.environ.get("EMAIL_TO", "").strip()
+EMAIL_RECIPIENTS = [addr.strip() for addr in EMAIL_TO.split(",") if addr.strip()]
+
 # ── LOGGING ───────────────────────────────────────────────────────────────────
 
 log_path = Path(__file__).parent / "stortemelk_monitor.log"
@@ -176,20 +185,36 @@ def send_notification(available_dates: list[str]):
         f"Beschikbare datum(s): {dates_str}\n"
         f"Boek nu: {BOOKING_URL}"
     )
-    try:
-        httpx.post(
-            NTFY_URL,
-            content=message.encode("utf-8"),
-            headers={
-                "Title": "Stortemelk beschikbaar!",
-                "Priority": "urgent",
-                "Tags": "tent,camping,netherlands",
-            },
-            timeout=10,
-        )
-        log.info("ntfy notification sent -> %s", NTFY_URL)
-    except Exception as e:
-        log.error("Failed to send ntfy notification: %s", e)
+    base_headers = {
+        "Title": "Stortemelk beschikbaar!",
+        "Priority": "urgent",
+        "Tags": "tent,camping,netherlands",
+    }
+    # First POST always sends the push notification. If there are email
+    # recipients, attach the first one to this POST and POST again (push-only)
+    # for each additional recipient — ntfy's `Email:` header is single-address.
+    posts: list[dict[str, str]] = []
+    if EMAIL_RECIPIENTS:
+        for addr in EMAIL_RECIPIENTS:
+            posts.append({**base_headers, "Email": addr})
+    else:
+        posts.append(base_headers)
+
+    for headers in posts:
+        try:
+            httpx.post(
+                NTFY_URL,
+                content=message.encode("utf-8"),
+                headers=headers,
+                timeout=10,
+            )
+        except Exception as e:
+            log.error("Failed to send ntfy notification (headers=%s): %s", headers, e)
+    log.info(
+        "ntfy notification sent -> %s%s",
+        NTFY_URL,
+        f" + email to {', '.join(EMAIL_RECIPIENTS)}" if EMAIL_RECIPIENTS else "",
+    )
 
 
 # ── MAIN LOOP ─────────────────────────────────────────────────────────────────
